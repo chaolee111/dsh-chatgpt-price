@@ -7,6 +7,8 @@
 > (Go / Plus / Pro 100 / Pro 200 / Pro 500), converted to CNY at 7.2 CNY/USD and to USD,
 > with a day-over-day change mark, plan selection and per-plan sorting.
 
+![ChatGPT prices by country](docs/screenshot.png)
+
 ## What it does
 
 | | |
@@ -115,6 +117,16 @@ The snapshot file is `chatgpt-price.json` in the DSH data directory.
 App Store in-app purchase list prices include local tax outside the US, while the web
 checkout may show a different figure for the same plan — the checkout page wins. The ¥
 column is a conversion for comparison, not a price you can pay.
+
+The screenshot is regenerated from a real snapshot, with no hand-edited numbers:
+
+```powershell
+python docs/make_screenshot.py "$env:USERPROFILE\.dsh\chatgpt-price.json" docs/screenshot.png
+```
+
+The script needs only Pillow. It re-applies the table's own ordering rules (plan
+selection, cheapest-first sort, vs-US ratio), so the picture matches what the plugin
+renders for the same data.
 
 ## License
 
