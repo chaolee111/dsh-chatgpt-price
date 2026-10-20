@@ -1,0 +1,20 @@
+﻿# dsh-chatgpt-price bundle layer.
+#
+# `dsh plugin --profile <name> add dsh-chatgpt-price` appends this layer to the
+# profile's `dsh.profile.bundles`. It inserts ONE host row that mounts the
+# plugin with its shipped defaults; override any field from the profile's own
+# `cordis.patch.yml` (a patch replaces the whole `config`, so restate every key
+# you keep).
+#
+#   - id: chatgpt-price
+#     config:
+#       cnyPerUsd: 7.2
+#       refreshHour: 9
+- insert:
+    - id: chatgpt-price
+      name: dsh-chatgpt-price
+      config:
+        regions: [US, JP, TW, SG, KR, MY, TH, IN, GB, DE, FR, NL, CH, SE, CA, MX, BR, AU, AE, TR, ZA]
+        cnyPerUsd: 7.2
+        refreshHour: 9
+        timeZone: Asia/Shanghai
