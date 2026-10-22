@@ -15,7 +15,7 @@
 | --- | --- |
 | **Source** | `apps.apple.com/{storefront}/app/chatgpt/id6448311069` — public, fast, tax-inclusive in-app prices |
 | **Plans** | Go · Plus · Pro 100 · Pro 200 · Pro 500 (consumables such as `N Credits` are dropped) |
-| **Regions** | 21 storefronts by default; HK / CN report "not sold there" instead of a fake price |
+| **Regions** | 33 storefronts by default, including PH / PK / VN / ID / EG / AR / CO / CL / NG / UA; HK / CN report "not sold there" instead of a fake price |
 | **Conversion** | local → USD (per-currency rate) → CNY at the **live USD/CNY rate of that same refresh** |
 | **Refresh** | once a day at `refreshHour` in `timeZone`, plus a boot refresh when the cache is older than 20 h |
 | **UI** | a Settings page, plus an optional `dsh-better-sidebar` tab |
@@ -73,7 +73,7 @@ Override the row in the profile's `cordis.patch.yml` (a patch replaces the whole
 
 | key | default | meaning |
 | --- | --- | --- |
-| `regions` | 21 storefronts | App Store storefront codes to track |
+| `regions` | 33 storefronts | App Store storefront codes to track |
 | `timeZone` / `refreshHour` | `Asia/Shanghai` / `9` | when the daily refresh happens |
 | `rateSources` | open.er-api → exchangerate-api → frankfurter | FX providers, tried in order on **every** refresh |
 | `requestTimeoutMs` | `20000` | per-request timeout |

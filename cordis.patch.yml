@@ -14,6 +14,39 @@
     - id: chatgpt-price
       name: dsh-chatgpt-price
       config:
-        regions: [US, JP, TW, SG, KR, MY, TH, IN, GB, DE, FR, NL, CH, SE, CA, MX, BR, AU, AE, TR, ZA]
+        regions:
+          - US
+          - JP
+          - TW
+          - SG
+          - KR
+          - MY
+          - TH
+          - PH
+          - VN
+          - ID
+          - IN
+          - PK
+          - GB
+          - DE
+          - FR
+          - NL
+          - CH
+          - SE
+          - SK
+          - CA
+          - MX
+          - BR
+          - CO
+          - CL
+          - AR
+          - AU
+          - AE
+          - SA
+          - TR
+          - EG
+          - NG
+          - ZA
+          - UA
         refreshHour: 9
         timeZone: Asia/Shanghai
