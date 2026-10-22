@@ -4,8 +4,8 @@
 
 > ChatGPT 各国订阅价格看板 — a [DeepSeek Harness](https://github.com/deepseek-ai) plugin that
 > keeps a **daily-refreshed** table of what ChatGPT costs in each country's App Store
-> (Go / Plus / Pro 100 / Pro 200 / Pro 500), converted to CNY at 7.2 CNY/USD and to USD,
-> with a day-over-day change mark, plan selection and per-plan sorting.
+> (Go / Plus / Pro 100 / Pro 200 / Pro 500), converted to CNY at the **live USD/CNY rate
+> fetched on every refresh**, with a day-over-day change mark, plan selection and per-plan sorting.
 
 ![ChatGPT prices by country](docs/screenshot.png)
 
@@ -16,7 +16,7 @@
 | **Source** | `apps.apple.com/{storefront}/app/chatgpt/id6448311069` — public, fast, tax-inclusive in-app prices |
 | **Plans** | Go · Plus · Pro 100 · Pro 200 · Pro 500 (consumables such as `N Credits` are dropped) |
 | **Regions** | 21 storefronts by default; HK / CN report "not sold there" instead of a fake price |
-| **Conversion** | local → USD (FX snapshot) → CNY (`cnyPerUsd`, default 7.2) |
+| **Conversion** | local → USD (per-currency rate) → CNY at the **live USD/CNY rate of that same refresh** |
 | **Refresh** | once a day at `refreshHour` in `timeZone`, plus a boot refresh when the cache is older than 20 h |
 | **UI** | a Settings page, plus an optional `dsh-better-sidebar` tab |
 | **Agent tools** | `chatgpt_price_board`, `refresh_chatgpt_prices` |
@@ -67,7 +67,6 @@ Override the row in the profile's `cordis.patch.yml` (a patch replaces the whole
 - id: chatgpt-price
   config:
     regions: [US, JP, TW, SG, IN, GB, DE, BR, TR, AU]
-    cnyPerUsd: 7.2
     refreshHour: 9
     timeZone: Asia/Shanghai
 ```
@@ -75,11 +74,13 @@ Override the row in the profile's `cordis.patch.yml` (a patch replaces the whole
 | key | default | meaning |
 | --- | --- | --- |
 | `regions` | 21 storefronts | App Store storefront codes to track |
-| `cnyPerUsd` | `7.2` | CNY per USD used for the ¥ column (OpenAI's own rate) |
 | `timeZone` / `refreshHour` | `Asia/Shanghai` / `9` | when the daily refresh happens |
-| `rateSources` | open.er-api → exchangerate-api → frankfurter | FX providers, tried in order |
+| `rateSources` | open.er-api → exchangerate-api → frankfurter | FX providers, tried in order on **every** refresh |
 | `requestTimeoutMs` | `20000` | per-request timeout |
 | `concurrency` / `requestsPerSecond` | `4` / `6` | politeness limits |
+| `retries` | `2` | per-region retries after a failed page (404 is never retried) |
+| `retryDelayMs` | `800` | retry backoff base; attempt N waits N × this |
+| `retryMinutes` | `5` | re-run the whole refresh this long after a failed/partial run (`0` disables) |
 | `autoRefreshOnBoot` | `true` | refresh at startup when the snapshot is older than 20 h |
 | `maxHistoryDays` | `90` | days of history kept in the snapshot |
 
@@ -95,9 +96,9 @@ lib/client.js   browser half: Settings page + optional sidebar tab
 locale/         display strings for plugin search (zh / en)
 ```
 
-- **Host half** does one scrape per day for every tracked region plus one FX snapshot,
-  writes an atomic JSON file, and exposes two routes and two agent tools. Every open
-  window reads the cache, so ten windows cost zero extra requests.
+- **Host half** does one scrape per day for every tracked region, refetches the live FX
+  table on the same run, writes an atomic JSON file, and exposes two routes and two agent
+  tools. Every open window reads the cache, so ten windows cost zero extra requests.
 - **Browser half** only *reads* the cached snapshot from the host and renders it with
   theme tokens (`--dsw-alias-*`), so light and dark follow the shell.
 
@@ -115,8 +116,35 @@ The snapshot file is `chatgpt-price.json` in the DSH data directory.
 ## Notes on the numbers
 
 App Store in-app purchase list prices include local tax outside the US, while the web
-checkout may show a different figure for the same plan — the checkout page wins. The ¥
-column is a conversion for comparison, not a price you can pay.
+checkout may show a different figure for the same plan — the checkout page wins.
+
+The ¥ column is a **real-cost estimate**, not a sticker conversion. Every refresh
+refetches the USD rate table and multiplies by the live USD/CNY rate, so the number
+tracks the market. Two things it cannot know:
+
+- **OpenAI's displayed 1 USD = 7.2 CNY is not a settlement rate.** It is the figure
+  OpenAI shows on its pricing pages; your card issuer still converts at the live rate.
+- **Card-side fees** (a 1%–1.5% foreign-transaction fee on many Chinese cards) are not
+  included, so the true bill can be a few percent above this column.
+
+If every rate provider fails, the CNY column is left empty for that refresh rather than
+falling back to a fixed 7.2 — a made-up rate would look authoritative and be wrong.
+
+## Failure handling
+
+The storefront requests leave through a proxy, and a proxy can answer one request with
+the wrong page (a bland shell with no product markup) while the next request for the
+same URL is fine. The board therefore never treats one bad answer as a fact:
+
+- **Per-region retry** — a failed page is retried up to `retries` times with linear
+  backoff. A `404` is a verdict ("not sold in this storefront") and is *not* retried.
+- **Carry-forward** — a region that still fails keeps its previous amounts, each marked
+  `stale: true`, so one bad page cannot blank a column.
+- **Whole-run retry** — a run that reads nothing, or only some regions, becomes due again
+  after `retryMinutes` instead of waiting for tomorrow's slot. The scheduler wakes every
+  minute to check, and the snapshot message says how many regions recovered on retry.
+- **Atomic write** — the snapshot is written to a temp file and renamed, so a crash
+  mid-write cannot leave truncated JSON behind.
 
 The screenshot is regenerated from a real snapshot, with no hand-edited numbers:
 
