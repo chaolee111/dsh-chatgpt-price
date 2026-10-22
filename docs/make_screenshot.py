@@ -133,7 +133,9 @@ bx = M + d.textlength("ChatGPT 各区价格", font=F["title"]) + 14
 d.rounded_rectangle([bx, y + 6, bx + bw, y + 30], radius=12, fill="#e8f5ee")
 d.text((bx + 11, y + 10), badge_text, font=F["badge"], fill=T["success"])
 
-meta = f"数据日期 {fmt_date(snap.get('date', '—'))}   ·   {len(regions)} 个地区 · {len(prices)} 条价格   ·   ¥ 按 {snap.get('cnyPerUsd', 7.2)} CNY/USD 折算（OpenAI 官方汇率）"
+rate = (snap.get("usdRates") or {}).get("CNY")
+rate_text = f"¥ 按实时汇率 {rate:.4f} CNY/USD 折算" if rate else "¥ 未取到实时汇率"
+meta = f"数据日期 {fmt_date(snap.get('date', '—'))}   ·   {len(regions)} 个地区 · {len(prices)} 条价格   ·   {rate_text}"
 d.text((M, y + 44), meta, font=F["small"], fill=T["label-secondary"])
 y += 78
 
@@ -164,7 +166,7 @@ y += 44
 # summary line
 summary = f"当前档位：{PLAN_LABELS[focus]}      最低 {region_name.get(low[1], low[1])} {money(low[0])}      最高 {region_name.get(high[1], high[1])} {money(high[0])}      价差：{spread_text}"
 d.text((M, y), summary, font=F["body"], fill=T["label-primary"])
-hint = f"2 个地区未在售   ·   相对美国 = 该区价格 ÷ 美国 {money(usd_cny)}"
+hint = f"相对美国 = 该区价格 ÷ 美国 {money(usd_cny)}   ·   人民币价按每次刷新时的实时汇率折算，不是 OpenAI 展示用的 7.2"
 d.text((M, y + 30), hint, font=F["small"], fill=T["label-secondary"])
 y += 66
 
