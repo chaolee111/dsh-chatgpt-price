@@ -1,6 +1,6 @@
 {
   "name": "dsh-chatgpt-price",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "ChatGPT per-country subscription price board for DeepSeek Harness: Plus/Go/Pro prices read from each country's App Store every day, converted to CNY at the live USD rate, with a Settings page and an optional sidebar tab.",
   "type": "module",
   "license": "MIT",
