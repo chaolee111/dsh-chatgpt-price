@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| **Source** | `apps.apple.com/{storefront}/app/chatgpt/id6448311069` — public, fast, tax-inclusive in-app prices |
+| **Source** | Apple's `viewSoftware` product endpoint, pinned to a storefront by header — public, fast, tax-inclusive in-app prices |
 | **Plans** | Go · Plus · Pro 100 · Pro 200 · Pro 500 (consumables such as `N Credits` are dropped) |
 | **Regions** | 33 storefronts by default, including PH / PK / VN / ID / EG / AR / CO / CL / NG / UA; HK / CN report "not sold there" instead of a fake price |
 | **Conversion** | local → USD (per-currency rate) → CNY at the **live USD/CNY rate of that same refresh** |
@@ -42,6 +42,23 @@ handles:
 - consumable rows (`100 Credits` …) are not plans and are dropped;
 - the list contains a **duplicate** `ChatGPT Plus` row carrying the Pro-200 price, so
   duplicates are resolved to the **lowest** amount.
+
+### Why the fetch does not use `apps.apple.com/{cc}/app/…`
+
+From a mainland-China egress that URL now answers `302 → /cn`, and the CN storefront
+does not sell this app, so the request lands on Apple's "Today" page with no product
+data — every region failing with "no prices on the page". `itunes.apple.com/WebObjects/
+MZStore.woa/wa/viewSoftware` is not geo-redirected and honours
+`x-apple-store-front: <id>-<n>,29`, which pins the storefront regardless of the
+visitor's IP.
+
+The trap: a **wrong `<n>` does not fail** — Apple silently answers as the US store, HTTP
+200 and all. So every response is validated against the storefront the page reports for
+itself (`storefront.cc`) and rejected on mismatch, trying the next candidate header.
+Measured 2026-10-30: suffix `1` for US/JP, `5` for CA, `2` for the other 30. A header
+that answered correctly is remembered, so a warm board makes exactly one request per
+region. Amounts come from `buyParams`' `price` field — an integer in thousandths of the
+currency unit, exact where the display string is localised text.
 
 Hong Kong and mainland China storefronts return 404 (the app is not sold there); those
 regions are reported as unavailable instead of being silently missing.
@@ -89,7 +106,7 @@ Override the row in the profile's `cordis.patch.yml` (a patch replaces the whole
 ```
 lib/index.js    host half: schedule tick, routes, agent tools, config schema
 lib/board.js    snapshot store: scrape → convert → persist (tmp + rename) → history
-lib/scrape.js   App Store page → { plan, amount, currency } pairs
+lib/scrape.js   storefront header table + page JSON island → { plan, amount, currency }
 lib/money.js    price parsing (comma/space decimals, ISO codes) + FX conversion
 lib/shared.js   route names, plan ids, record shapes
 lib/client.js   browser half: Settings page + optional sidebar tab
@@ -137,7 +154,8 @@ the wrong page (a bland shell with no product markup) while the next request for
 same URL is fine. The board therefore never treats one bad answer as a fact:
 
 - **Per-region retry** — a failed page is retried up to `retries` times with linear
-  backoff. A `404` is a verdict ("not sold in this storefront") and is *not* retried.
+  backoff. A `404` is a verdict ("not sold in this storefront") and is *not* retried, and
+  neither is a storefront mismatch (no header can fix a wrong region mapping).
 - **Carry-forward** — a region that still fails keeps its previous amounts, each marked
   `stale: true`, so one bad page cannot blank a column.
 - **Whole-run retry** — a run that reads nothing, or only some regions, becomes due again
